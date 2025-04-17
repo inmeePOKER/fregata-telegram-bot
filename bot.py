@@ -1,42 +1,28 @@
-import logging
+from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler
 import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 
-BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+ADMIN_ID = os.getenv("ADMIN_ID")
 
-logging.basicConfig(level=logging.INFO)
+def start(update, context):
+    update.message.reply_text("Привет! Я бот для утверждения постов.")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Привет! Я бот Nocna Fregata. Готов к работе ✅")
-
-async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("I'm alive 🟢")
-
-async def confirm_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("✅ Утвердить", callback_data="approve"),
-         InlineKeyboardButton("❌ Отклонить", callback_data="reject")]
-    ]
-    await update.message.reply_text("Подтверди публикацию:", reply_markup=InlineKeyboardMarkup(keyboard))
-
-async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == "approve":
-        await query.edit_message_text("Пост утверждён ✅")
+def approve(update, context):
+    if update.message.from_user.id == int(ADMIN_ID):
+        update.message.reply_text("Пост утверждён!")
     else:
-        await query.edit_message_text("Пост отклонён ❌")
+        update.message.reply_text("У вас нет прав на утверждение.")
 
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("ping", ping))
-    app.add_handler(CommandHandler("confirm", confirm_post))
-    app.add_handler(CallbackQueryHandler(handle_callback))
+    updater = Updater(TELEGRAM_TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    app.run_polling()
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("approve", approve))
+
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
     main()
